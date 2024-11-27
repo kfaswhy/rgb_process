@@ -40,15 +40,15 @@ void load_cfg()
 	cfg.ltm_on = 1;
 	cfg.ccm_on = 1;
 	cfg.rgbgamma_on = 1;
-	cfg.degamma_on = 0;
+	cfg.degamma_on = 1;
 	cfg.ygamma_on = 0;
 	cfg.sharp_on = 0;
 
 	cfg.ob = 4096 ;
 	cfg.isp_gain = 1524;
 
-	cfg.r_gain = 1400;
-	cfg.b_gain = 2800;
+	cfg.r_gain = 1024;
+	cfg.b_gain = 1024*8/10;
 
 	cfg.ltm_strength = 0.2;
 	cfg.ltm_vblk = 4;
@@ -56,9 +56,10 @@ void load_cfg()
 	cfg.ltm_cst_thdr = 1;
 
 	float ccm_tmp[9] = {
- 1.2604 ,- 0.0017 ,- 0.1949,
-- 0.3316 ,  1.5985, - 0.1836,
- 0.0712 ,- 0.5968 ,  1.3785
+ 1.1076 ,  0.1107, - 0.2424,
+- 0.2200,   1.4588, - 0.2484,
+ 0.1124, - 0.5695,   1.4908
+
 
 
 
@@ -118,15 +119,22 @@ int main()
 #endif
 
 
+	awb_process(rgb_data, context, cfg);
+#if DEBUG_MODE
+	save_bmp("2_awb.bmp", rgb_data, &context);
+#endif
+
+
+
 
 	ccm_process(rgb_data, context, cfg);
 #if DEBUG_MODE
-	save_bmp("2_ccm.bmp", rgb_data, &context);
+	save_bmp("3_ccm.bmp", rgb_data, &context);
 #endif
 
 	rgbgamma_process(rgb_data, context, cfg);
 #if DEBUG_MODE
-	save_bmp("2_rgbgamma.bmp", rgb_data, &context);
+	save_bmp("4_rgbgamma.bmp", rgb_data, &context);
 #endif
 
 
