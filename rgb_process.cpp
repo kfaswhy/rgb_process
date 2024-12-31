@@ -26,44 +26,46 @@ G_CONFIG cfg = { 0 };
 
 void load_cfg()
 {
-	cfg.bit = 16;
-	cfg.used_bit = 12;
-	cfg.order = LITTLE_ENDIAN;
-	cfg.pattern = RGGB;
-	cfg.width = 2592;
-	cfg.height = 1536;
+	//cfg.bit = 16;
+	//cfg.used_bit = 12;
+	//cfg.order = LITTLE_ENDIAN;
+	//cfg.pattern = RGGB;
+	//cfg.width = 2592;
+	//cfg.height = 1536;
 	//以上没用了
 	
-	cfg.ob_on = 1;
-	cfg.isp_gain_on = 1;
+	//cfg.ob_on = 1;
+	cfg.isp_gain_on = 0;
+
+	cfg.degamma_on = 0;
 	cfg.awb_on = 1;
-	cfg.ltm_on = 1;
+	//cfg.ltm_on = 1;
 	cfg.ccm_on = 1;
 	cfg.rgbgamma_on = 1;
-	cfg.degamma_on = 1;
-	cfg.ygamma_on = 0;
+	
+	//cfg.ygamma_on = 0;
 	cfg.sharp_on = 0;
 
-	cfg.ob = 4096 ;
-	cfg.isp_gain = 1524;
+	//cfg.ob = 4096 ;
+	//cfg.isp_gain = 1524;
 
-	cfg.r_gain = 1024;
-	cfg.b_gain = 1024*8/10;
+	cfg.r_gain = 1.15 *1024;
+	cfg.b_gain = 1.2222222 *1024;
 
-	cfg.ltm_strength = 0.2;
-	cfg.ltm_vblk = 4;
-	cfg.ltm_hblk = 2;
-	cfg.ltm_cst_thdr = 1;
+	//cfg.ltm_strength = 0.2;
+	//cfg.ltm_vblk = 4;
+	//cfg.ltm_hblk = 2;
+	//cfg.ltm_cst_thdr = 1;
 
 	float ccm_tmp[9] = {
- 1.1076 ,  0.1107, - 0.2424,
-- 0.2200,   1.4588, - 0.2484,
- 0.1124, - 0.5695,   1.4908
-
+1.1787 ,  0.0665 , -0.3283  ,
+-0.3505 ,  1.7091 , -0.5077  ,
+ 0.20 , -0.7756  , 1.8360
 
 
 
 	};
+
 
 	U32 gamma_xtmp[49] =
 	{
@@ -75,20 +77,15 @@ void load_cfg()
 		0,6,11,17,22,28,33,39,44,55,66,77,88,109,130,150,170,210,248,286,323,393,460,525,586,702,809,909,1002,1172,1323,1461,1587,1810,2003,2173,2325,2589,2812,3010,3191,3355,3499,3624,3736,3836,3927,4012,4095
 	};
 
-
-
 	U32 degamma_xtmp[49] =
 	{
-		0,6,11,17,22,28,33,39,44,55,66,77,88,109,130,150,170,210,248,286,323,393,460,525,586,702,809,909,1002,1172,1323,1461,1587,1810,2003,2173,2325,2589,2812,3010,3191,3355,3499,3624,3736,3836,3927,4012,4095
+		0, 6, 11, 17, 22, 28, 33, 39, 44, 55, 66, 77, 88, 109, 130, 150, 170, 210, 248, 286, 323, 393, 460, 525, 586, 702, 809, 909, 1002, 1172, 1323, 1461, 1587, 1810, 2003, 2173, 2325, 2589, 2812, 3010, 3191, 3355, 3499, 3624, 3736, 3836, 3927, 4012, 4095
 	};
 
 	U32 degamma_ytmp[49] =
-	{
+	{ 
 		0,1,2,3,4,5,6,7,8,10,12,14,16,20,24,28,32,40,48,56,64,80,96,112,128,160,192,224,256,320,384,448,512,640,768,896,1024,1280,1536,1792,2048,2304,2560,2816,3072,3328,3584,3840,4095
 	};
-
-
-
 
 	memcpy(cfg.ccm, ccm_tmp, 9 * sizeof(float));
 	
@@ -107,45 +104,32 @@ int main()
 	RGB* rgb_data = load_bmp(filename, &context);
 	YUV* yuv_data = NULL;
 
-
-
 	save_bmp("0.bmp", rgb_data, &context);
 
 	//进入RGB域
 
 	degamma_process(rgb_data, context, cfg);
-#if DEBUG_MODE
 	save_bmp("1_degamma.bmp", rgb_data, &context);
-#endif
-
 
 	awb_process(rgb_data, context, cfg);
-#if DEBUG_MODE
 	save_bmp("2_awb.bmp", rgb_data, &context);
-#endif
-
-
-
 
 	ccm_process(rgb_data, context, cfg);
-#if DEBUG_MODE
 	save_bmp("3_ccm.bmp", rgb_data, &context);
-#endif
+
+	
+
 
 	rgbgamma_process(rgb_data, context, cfg);
-#if DEBUG_MODE
 	save_bmp("4_rgbgamma.bmp", rgb_data, &context);
-#endif
 
 
 	yuv_data = r2y_process(rgb_data, context, cfg);
 	//进入YUV域
 
 	sharp_process(yuv_data, context, cfg);
-#if DEBUG_MODE
 	rgb_data = y2r_process(yuv_data, context, cfg);
 	save_bmp("20_sharp.bmp", rgb_data, &context);
-#endif
 
 
 	rgb_data = y2r_process(yuv_data, context, cfg);
@@ -474,6 +458,10 @@ void save_bmp(const char* filename, RGB* img, IMG_CONTEXT* context)
 			fwrite(context->pad, 1, context->PaddingSize, f_out);
 		}
 	}
+
+
 	fclose(f_out);
+	
+	LOG("saved %s.", filename);
 	return;
 }

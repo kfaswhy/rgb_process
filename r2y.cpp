@@ -23,7 +23,7 @@ YUV* r2y_process(RGB* rgb, IMG_CONTEXT context, G_CONFIG cfg)
         yuv[i].y = clp_range(0, y_val, U8MAX);
         yuv[i].u = clp_range(0, u_val, U8MAX);
         yuv[i].v = clp_range(0, v_val, U8MAX);
-
+        print_prog(i, context.full_size);
     }
     LOG("done.");
     return yuv;

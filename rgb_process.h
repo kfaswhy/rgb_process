@@ -21,6 +21,7 @@ typedef long long S64;
 typedef unsigned int U32;
 typedef int S32;
 typedef unsigned short U16;
+typedef short S16;
 typedef unsigned char U8;
 
 #define U16MAX (0xFFFF)
