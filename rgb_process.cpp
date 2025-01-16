@@ -412,6 +412,23 @@ RGB* load_bmp(const char* filename, IMG_CONTEXT* context)
 			}
 		}
 	}
+	else if(context->infoHeader.biBitCount == 32)
+    {
+		for (int i = 0; i < context->height; i++) {
+			for (int j = 0; j < context->width; j++) {
+				int index = i * context->width + j;
+				RGBQUAD quad;
+				fread(&quad, sizeof(RGBQUAD), 1, f_in);
+				img[index].r = quad.rgbRed;
+				img[index].g = quad.rgbGreen;
+				img[index].b = quad.rgbBlue;
+			}
+			if (context->PaddingSize != 0)
+			{
+				fread(context->pad, 1, context->PaddingSize, f_in);
+			}
+		}
+	}
 	else
 	{
 		LOG("Only support BMP in 24-bit.");
