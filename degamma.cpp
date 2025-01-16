@@ -1,3 +1,6 @@
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 #include "degamma.h"
 
 U8 degamma_process(RGB* rgb, IMG_CONTEXT context, G_CONFIG cfg)
@@ -9,7 +12,6 @@ U8 degamma_process(RGB* rgb, IMG_CONTEXT context, G_CONFIG cfg)
     U32 tmp_x = 0;
     U32 tmp_y = 0;
     RGB* p_rgb = &rgb[0];
-
 
     for (int i = 0; i < context.full_size; i++)
     {
@@ -27,6 +29,8 @@ U8 degamma_process(RGB* rgb, IMG_CONTEXT context, G_CONFIG cfg)
 
         p_rgb++;
     }
+
+    save_img_with_timestamp(rgb, &context, "_degamma");
 
     LOG("done.");
     return OK;

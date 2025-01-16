@@ -21,7 +21,7 @@ U8 awb_process(RGB *rgb, IMG_CONTEXT context, G_CONFIG cfg)
 
         print_prog(i, context.full_size);
     }
-
+    save_img_with_timestamp(rgb, &context, "_awb");
     LOG("done.");
     return OK;
 }

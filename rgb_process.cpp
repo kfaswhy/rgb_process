@@ -15,7 +15,7 @@
 
 using namespace std;
 using namespace cv;
-
+namespace fs = std::experimental::filesystem;
 
 U32 time_print_prog_start = clock();
 U32 time_print_prog_end;
@@ -26,46 +26,25 @@ G_CONFIG cfg = { 0 };
 
 void load_cfg()
 {
-	//cfg.bit = 16;
-	//cfg.used_bit = 12;
-	//cfg.order = LITTLE_ENDIAN;
-	//cfg.pattern = RGGB;
-	//cfg.width = 2592;
-	//cfg.height = 1536;
-	//以上没用了
-	
-	//cfg.ob_on = 1;
-	cfg.isp_gain_on = 0;
 
+	cfg.isp_gain_on = 0;
 	cfg.degamma_on = 0;
 	cfg.awb_on = 1;
-	//cfg.ltm_on = 1;
 	cfg.ccm_on = 1;
 	cfg.rgbgamma_on = 1;
-	
-	//cfg.ygamma_on = 0;
 	cfg.sharp_on = 0;
 
-	//cfg.ob = 4096 ;
-	//cfg.isp_gain = 1524;
-
-	cfg.r_gain = 1.15 *1024;
-	cfg.b_gain = 1.2222222 *1024;
-
-	//cfg.ltm_strength = 0.2;
-	//cfg.ltm_vblk = 4;
-	//cfg.ltm_hblk = 2;
-	//cfg.ltm_cst_thdr = 1;
+	cfg.r_gain = 1.162 * 1024;
+	cfg.b_gain = 0.978 * 1024;
 
 	float ccm_tmp[9] = {
-1.1787 ,  0.0665 , -0.3283  ,
--0.3505 ,  1.7091 , -0.5077  ,
- 0.20 , -0.7756  , 1.8360
+ 1.0054, - 0.0258,   0.0686,
+- 0.0815,   1.0721,   0.0170,
+ 0.0761, - 0.0463,   0.9144
 
 
 
 	};
-
 
 	U32 gamma_xtmp[49] =
 	{
@@ -96,48 +75,45 @@ void load_cfg()
 	return;
 }
 
-int main() 
+void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg)
 {
-	load_cfg();
-	IMG_CONTEXT context = { 0 };
-	const char* filename = "data/0.bmp";
-	RGB* rgb_data = load_bmp(filename, &context);
 	YUV* yuv_data = NULL;
-
-	save_bmp("0.bmp", rgb_data, &context);
-
 	//进入RGB域
 
-	degamma_process(rgb_data, context, cfg);
-	save_bmp("1_degamma.bmp", rgb_data, &context);
-
 	awb_process(rgb_data, context, cfg);
-	save_bmp("2_awb.bmp", rgb_data, &context);
-
 	ccm_process(rgb_data, context, cfg);
-	save_bmp("3_ccm.bmp", rgb_data, &context);
-
-	
-
-
 	rgbgamma_process(rgb_data, context, cfg);
-	save_bmp("4_rgbgamma.bmp", rgb_data, &context);
-
 
 	yuv_data = r2y_process(rgb_data, context, cfg);
 	//进入YUV域
 
 	sharp_process(yuv_data, context, cfg);
-	rgb_data = y2r_process(yuv_data, context, cfg);
-	save_bmp("20_sharp.bmp", rgb_data, &context);
-
 
 	rgb_data = y2r_process(yuv_data, context, cfg);
-	save_bmp("99_final.bmp", rgb_data, &context);
 
+	
+	safe_free(yuv_data);
+}
+
+int main() 
+{
+	load_cfg();
+	IMG_CONTEXT context = { 0 };
+	const char* filename = "data/0.jpg";
+	RGB* rgb_data = load_img(filename, &context);
+	clear_tmp();
+
+	save_img_with_timestamp(rgb_data, &context, "_original");
+	
+	degamma_process(rgb_data, context, cfg);
+
+	rk3588_isp(rgb_data, context, cfg);
+
+
+	save_img_with_timestamp(rgb_data, &context, "_final");
     // 释放内存
-	free(rgb_data);
-	free(yuv_data);
+	safe_free(rgb_data);
+	
 
 	time_print_prog_end = clock();
 	LOG("time = %.2f s.", ((float)time_print_prog_end - time_print_prog_start) / 1000);
@@ -182,178 +158,6 @@ U32 calc_inter(U32 x0, U32* x, U32* y, U32 len)
 	return y0;
 }
 
-RGB* raw2rgb(U16* raw, IMG_CONTEXT context, G_CONFIG cfg) {
-    // 获取图像的宽高和 Bayer Pattern
-    U16 width = context.width;
-    U16 height = context.height;
-    BayerPattern pattern = (BayerPattern)cfg.pattern;
-    ByteOrder order = (ByteOrder)cfg.order;
-    const U8 bit_depth = cfg.bit;
-    const int bit_shift = cfg.bit - 8;
-
-    // 确定最大有效值
-    U16 max_val = (1 << bit_depth) - 1;
-
-    // 确保原始数据按大小端顺序处理
-    for (U32 i = 0; i < width * height; i++) {
-        if (order == LITTLE_ENDIAN) {
-            raw[i] = raw[i] & max_val; // 提取低 bit_depth 位
-        }
-        else if (order == BIG_ENDIAN) {
-            raw[i] = ((raw[i] & 0xFF) << 8 | (raw[i] >> 8)) & max_val;
-        }
-    }
-
-    // 分配 RGB 数据的内存
-    RGB* rgb_data = (RGB*)malloc(width * height * sizeof(RGB));
-    if (!rgb_data) {
-        fprintf(stderr, "Memory allocation for RGB data failed.\n");
-        return NULL;
-    }
-
-    // 根据 Bayer Pattern 进行插值处理
-    for (U16 y = 0; y < height; y++) {
-        for (U16 x = 0; x < width; x++) {
-            RGB pixel = { 0, 0, 0 };
-            U32 val = 0;
-
-            // 插值计算
-            switch (pattern) {
-            case RGGB:
-                if ((y % 2 == 0) && (x % 2 == 0)) //R
-                {
-                    val = raw[y * width + x] >> bit_shift;
-                    pixel.r = clp_range(0, val, U8MAX);
-					pixel.g = 0;
-					pixel.b = 0;
-                }
-                else if ((y % 2 == 0) && (x % 2 == 1)) //GR
-                {
-                    val = raw[y * width + x] >> bit_shift;
-                    pixel.g = clp_range(0, val, U8MAX);
-                    pixel.r = 0;
-                    pixel.b = 0;
-                }
-                else if ((y % 2 == 1) && (x % 2 == 0)) //GB
-                {
-                    val = raw[y * width + x] >> bit_shift;
-                    pixel.g = clp_range(0, val, U8MAX);
-					pixel.r = 0;
-					pixel.b = 0;
-                }
-                else //B
-                {
-                    val = raw[y * width + x] >> bit_shift;
-                    pixel.b = clp_range(0, val, U8MAX);
-					pixel.r = 0;
-					pixel.g = 0;
-                }
-				break;
-            case BGGR:
-                if ((y % 2 == 0) && (x % 2 == 0)) //B
-                {
-					val = raw[y * width + x] >> bit_shift;
-					pixel.b = clp_range(0, val, U8MAX);
-					pixel.r = 0;
-					pixel.g = 0;
-                }
-                else if ((y % 2 == 0) && (x % 2 == 1)) //GB
-                {
-					val = raw[y * width + x] >> bit_shift;
-					pixel.g = clp_range(0, val, U8MAX);
-					pixel.r = 0;
-					pixel.b = 0;
-                }
-                else if ((y % 2 == 1) && (x % 2 == 0)) //GR
-                {
-					val = raw[y * width + x] >> bit_shift;
-					pixel.g = clp_range(0, val, U8MAX);
-					pixel.r = 0;
-					pixel.b = 0;
-                }
-                else //R
-                {
-					val = raw[y * width + x] >> bit_shift;
-					pixel.r = clp_range(0, val, U8MAX);
-					pixel.g = 0;
-					pixel.b = 0;
-                }
-                break;
-                // Other patterns (GRBG, GBRG, BGGR) can be implemented similarly
-            default:
-                fprintf(stderr, "Unsupported Bayer Pattern.\n");
-                free(rgb_data);
-                return NULL;
-            }
-
-            // 保存到 RGB 数据
-            rgb_data[y * width + x] = pixel;
-        }
-    }
-
-    return rgb_data;
-}
-
-
-
-
-
-U16* readraw(const char* filename, IMG_CONTEXT context, G_CONFIG cfg)
-{
-    int bytesPerPixel = (cfg.bit + 7) / 8;  // 计算每像素的字节数
-    int dataSize = context.width * context.height * bytesPerPixel;  // 数据总大小
-    U16* raw = (U16*)malloc(context.width * context.height * sizeof(U16));
-
-    FILE* rawFile = fopen(filename, "rb");
-    if (!rawFile) {
-        fprintf(stderr, "无法打开文件: %s\n", filename);
-        return NULL;
-    }
-
-    U8* buffer = (U8*)malloc(dataSize);
-    fread(buffer, 1, dataSize, rawFile);
-    fclose(rawFile);
-
-    for (int i = 0; i < context.width * context.height; i++) {
-		if (cfg.bit == 16) {
-			raw[i] = cfg.order == LITTLE_ENDIAN
-                ? buffer[i * 2] | (buffer[i * 2 + 1] << 8)
-                : (buffer[i * 2] << 8) | buffer[i * 2 + 1];
-        }
-        else {
-			raw[i] = buffer[i];
-        }
-
-		raw[i] = raw[i] << (cfg.bit - cfg.used_bit);
-    }
-
-    free(buffer);
-    return raw;
-}
-
-U8 save_rgb(const char* filename, RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg) {
-	// 创建 OpenCV Mat 对象
-	int width = context.width;
-	int height = context.height;
-	cv::Mat img(height, width, CV_8UC3);
-
-	// 填充 Mat 数据
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			RGB pixel = rgb_data[y * width + x];
-			img.at<cv::Vec3b>(y, x) = cv::Vec3b(pixel.b, pixel.g, pixel.r);
-		}
-	}
-
-	// 保存到文件
-	if (cv::imwrite(filename, img)) {
-		return 1; // 保存成功
-	}
-	else {
-		return 0; // 保存失败
-	}
-}
-
 void safe_free(void* p)
 {
 	if (NULL != p)
@@ -375,110 +179,107 @@ void print_prog(U32 cur_pos, U32 tgt)
 	return;
 }
 
-RGB* load_bmp(const char* filename, IMG_CONTEXT* context)
+RGB* load_img(const char* filename, IMG_CONTEXT* context)
 {
-	FILE* f_in = fopen(filename, "rb");
-	if (f_in == NULL)
-	{
-		LOG("Cannot find %s", filename);
+	// 使用 OpenCV 加载图像
+	cv::Mat img = cv::imread(filename, cv::IMREAD_COLOR);
+	if (img.empty()) {
+		fprintf(stderr, "无法加载图像: %s\n", filename);
 		return NULL;
 	}
 
-	fread(&context->fileHeader, sizeof(BITMAPFILEHEADER), 1, f_in);
-	fread(&context->infoHeader, sizeof(BITMAPINFOHEADER), 1, f_in);
-
-	context->height = context->infoHeader.biHeight;
-	context->width = context->infoHeader.biWidth;
+	// 设置图像上下文
+	context->width = img.cols;
+	context->height = img.rows;
 	context->full_size = context->width * context->height;
-	//context->w_samp = context->width / cfg.sample_ratio;
-	//context->h_samp = context->height / cfg.sample_ratio;
 
-
-	int LineByteCnt = (((context->width * context->infoHeader.biBitCount) + 31) >> 5) << 2;
-	//int ImageDataSize = LineByteCnt * height;
-	context->PaddingSize = 4 - ((context->width * context->infoHeader.biBitCount) >> 3) & 3;
-	context->pad = (BYTE*)malloc(sizeof(BYTE) * context->PaddingSize);
-	RGB* img = (RGB*)malloc(sizeof(RGB) * context->height * context->width);
-
-	if (context->infoHeader.biBitCount == 24) {
-		for (int i = 0; i < context->height; i++) {
-			for (int j = 0; j < context->width; j++) {
-				int index = i * context->width + j;
-				fread(&img[index], sizeof(RGB), 1, f_in);
-			}
-			if (context->PaddingSize != 0)
-			{
-				fread(context->pad, 1, context->PaddingSize, f_in);
-			}
-		}
-	}
-	else if(context->infoHeader.biBitCount == 32)
-    {
-		for (int i = 0; i < context->height; i++) {
-			for (int j = 0; j < context->width; j++) {
-				int index = i * context->width + j;
-				RGBQUAD quad;
-				fread(&quad, sizeof(RGBQUAD), 1, f_in);
-				img[index].r = quad.rgbRed;
-				img[index].g = quad.rgbGreen;
-				img[index].b = quad.rgbBlue;
-			}
-			if (context->PaddingSize != 0)
-			{
-				fread(context->pad, 1, context->PaddingSize, f_in);
-			}
-		}
-	}
-	else
-	{
-		LOG("Only support BMP in 24-bit.");
+	// 分配 RGB 数据的内存
+	RGB* rgb_data = (RGB*)malloc(context->full_size * sizeof(RGB));
+	if (!rgb_data) {
+		fprintf(stderr, "RGB 数据内存分配失败.\n");
 		return NULL;
 	}
 
-	fclose(f_in);
-	return img;
+	// 填充 RGB 数据
+	for (int y = 0; y < context->height; y++) {
+		for (int x = 0; x < context->width; x++) {
+			cv::Vec3b pixel = img.at<cv::Vec3b>(y, x);
+			rgb_data[y * context->width + x].b = pixel[0];
+			rgb_data[y * context->width + x].g = pixel[1];
+			rgb_data[y * context->width + x].r = pixel[2];
+		}
+	}
+
+	return rgb_data;
 }
 
-void save_bmp(const char* filename, RGB* img, IMG_CONTEXT* context)
-{
-	FILE* f_out = fopen(filename, "wb");
 
-	context->fileHeader.bfType = 0x4D42; // 'BM'
-	context->fileHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
-	context->fileHeader.bfSize = context->fileHeader.bfOffBits + context->width * context->height * sizeof(RGB);
-	context->fileHeader.bfReserved1 = 0;
-	context->fileHeader.bfReserved2 = 0;
-	 
-	context->infoHeader.biSize = sizeof(BITMAPINFOHEADER);
-	context->infoHeader.biWidth = context->width;
-	context->infoHeader.biHeight = context->height;
-	context->infoHeader.biPlanes = 1;
-	context->infoHeader.biBitCount = 24;
-	context->infoHeader.biCompression = 0;
-	context->infoHeader.biSizeImage = context->width * context->height * sizeof(RGB);
-	context->infoHeader.biXPelsPerMeter = 0;
-	context->infoHeader.biYPelsPerMeter = 0;
-	context->infoHeader.biClrUsed = 0;
-	context->infoHeader.biClrImportant = 0;
+void clear_tmp() {
+	std::string extensions[] = { ".jpg", ".png", ".bmp" };
 
-	fwrite(&context->fileHeader, sizeof(context->fileHeader), 1, f_out);
-	fwrite(&context->infoHeader, sizeof(context->infoHeader), 1, f_out);
+	for (const auto& entry : fs::directory_iterator(".")) {
+		if (fs::is_regular_file(entry.path())) { // Use fs::is_regular_file
+			std::string file_ext = entry.path().extension().string();
 
-	for (int i = 0; i < context->height; i++)
-	{
-		for (int j = 0; j < context->width; j++)
-		{
-			fwrite(&img[i * context->width + j], sizeof(RGB), 1, f_out);
+			for (const auto& ext : extensions) {
+				if (file_ext == ext) {
+					try {
+						fs::remove(entry.path());
+						//std::cout << "删除文件: " << entry.path() << std::endl;
+					}
+					catch (const std::exception& e) {
+						std::cerr << "删除文件失败: " << entry.path() << " 错误: " << e.what() << std::endl;
+					}
+					break;
+				}
+			}
 		}
-		if (context->PaddingSize != 0)
-		{
-			fwrite(context->pad, 1, context->PaddingSize, f_out);
+	}
+}
+
+void save_img(const char* filename, RGB* img, IMG_CONTEXT* context, int compression_quality = 100)
+{
+	// 创建一个空的 OpenCV Mat 对象
+	cv::Mat mat_img(context->height, context->width, CV_8UC3);
+
+	// 填充 Mat 对象
+	for (int y = 0; y < context->height; y++) {
+		for (int x = 0; x < context->width; x++) {
+			RGB pixel = img[y * context->width + x];
+			mat_img.at<cv::Vec3b>(y, x) = cv::Vec3b(pixel.b, pixel.g, pixel.r);
 		}
 	}
 
+	// 设置图像保存参数，例如压缩质量
+	std::vector<int> params;
+	params.push_back(cv::IMWRITE_JPEG_QUALITY);  // 对 JPEG 格式指定压缩质量
+	params.push_back(compression_quality);
 
-	fclose(f_out);
-	
-	LOG("saved %s.", filename);
-	return;
+	// 使用 OpenCV 保存图像，传递参数来设置压缩质量
+	bool success = cv::imwrite(filename, mat_img, params);
+
+	if (success) {
+		LOG("%s saved (Q=%d)", filename, compression_quality);
+	}
+	else {
+		LOG("Failed to save %s.", filename);
+	}
+}
+
+
+void save_img_with_timestamp(RGB* rgb_data, IMG_CONTEXT* context, const char *suffix) {
+	// 获取当前时间戳
+	SYSTEMTIME st;
+	GetSystemTime(&st);
+
+	// 格式化时间戳
+	char buffer[80];
+	snprintf(buffer, sizeof(buffer), "%02d%02d%02d%03d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+
+	// 生成文件名
+	char filename[100];
+	snprintf(filename, sizeof(filename), "%s%s.jpg", buffer, suffix);
+
+	// 保存 BMP 文件
+	save_img(filename, rgb_data, context);
 }

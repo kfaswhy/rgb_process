@@ -27,6 +27,7 @@ U8 rgbgamma_process(RGB* rgb, IMG_CONTEXT context, G_CONFIG cfg)
 
         p_rgb++;
     }
+    save_img_with_timestamp(rgb, &context, "_gamma");
 
     LOG("done.");
     return OK;

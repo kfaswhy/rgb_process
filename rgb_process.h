@@ -1,6 +1,7 @@
 #pragma once
 
 #define _CRT_SECURE_NO_WARNINGS
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 
 #define DEBUG_MODE 1//需要调试时置1，否则置0
 
@@ -15,6 +16,11 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <filesystem>
+#include <experimental/filesystem>
+
+#include <time.h>
+
 
 typedef unsigned long long U64;
 typedef long long S64;
@@ -114,23 +120,25 @@ typedef struct _IMG_CONTEXT
 
 void load_cfg();
 
+void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg);
+
+
 int main();
 
 U32 calc_inter(U32 x0, U32* x, U32* y, U32 len);
-
-RGB* raw2rgb(U16* raw, IMG_CONTEXT context, G_CONFIG cfg);
-
-// 函数声明：读取 RAW 数据到一维数组
-
-U16* readraw(const char* filename, IMG_CONTEXT context, G_CONFIG cfg);
-
-U8 save_rgb(const char* filename, RGB* rgb, IMG_CONTEXT context, G_CONFIG cfg);
 
 void safe_free(void* p);
 
 void print_prog(U32 cur_pos, U32 tgt);
 
-RGB* load_bmp(const char* filename, IMG_CONTEXT* context);
 
-void save_bmp(const char* filename, RGB* img, IMG_CONTEXT* context);
+
+RGB* load_img(const char* filename, IMG_CONTEXT* context);
+
+void clear_tmp();
+
+void save_img(const char* filename, RGB* img, IMG_CONTEXT* context, int compression_quality);
+
+
+void save_img_with_timestamp(RGB* rgb_data, IMG_CONTEXT* context, const char* suffix);
 

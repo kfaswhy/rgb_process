@@ -1,4 +1,5 @@
 #include "sharp.h"
+#include "y2r.h"
 // Simple sharpen kernel (example: a 3x3 filter)
 
 #define K_SIZE 3
@@ -108,6 +109,10 @@ U8 sharp_process(YUV* yuv, IMG_CONTEXT context, G_CONFIG cfg)
         yuv[i].y = clp_range(0, tmp, U8MAX);
     }
 
+
+    RGB *rgb_data = y2r_process(yuv, context, cfg);
+
+    save_img_with_timestamp(rgb_data, &context, "_sharp");
     LOG("done.");
     return OK;
 }
