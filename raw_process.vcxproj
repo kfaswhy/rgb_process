@@ -148,6 +148,7 @@
     <ClCompile Include="ccm.cpp" />
     <ClCompile Include="degamma.cpp" />
     <ClCompile Include="demosaic.cpp" />
+    <ClCompile Include="interp.cpp" />
     <ClCompile Include="isp_gain.cpp" />
     <ClCompile Include="ltm.cpp" />
     <ClCompile Include="ob.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="ccm.h" />
     <ClInclude Include="degamma.h" />
     <ClInclude Include="demosaic.h" />
+    <ClInclude Include="interp.h" />
     <ClInclude Include="isp_gain.h" />
     <ClInclude Include="ltm.h" />
     <ClInclude Include="ob.h" />

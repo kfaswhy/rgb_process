@@ -12,6 +12,7 @@
 #include "ygamma.h"
 #include "sharp.h"
 #include "y2r.h"
+#include "interp.h"
 
 using namespace std;
 using namespace cv;
@@ -98,29 +99,32 @@ void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg)
 int main() 
 {
 	load_cfg();
-	IMG_CONTEXT context = { 0 };
-	const char* filename = "data/0.jpg";
-	RGB* rgb_data = load_img(filename, &context);
 	clear_tmp();
-
-	save_img_with_timestamp(rgb_data, &context, "_original");
+	IMG_CONTEXT context = { 0 };
+	const char* filename0 = "data/0.jpg";
+	const char* filename2 = "data/2.jpg";
+	RGB* rgb_data0 = load_img(filename0, &context);
+	RGB* rgb_data2 = load_img(filename2, &context);
 	
-	degamma_process(rgb_data, context, cfg);
-
-	rk3588_isp(rgb_data, context, cfg);
-
-
-	save_img_with_timestamp(rgb_data, &context, "_final");
-    // 释放内存
-	safe_free(rgb_data);
 	
+
+	// 插值因子 alpha
+	float alpha = 1;  // 从0到1的值
+
+	// 使用光流进行插帧
+	RGB* rgb_data1 = interp_with_optical_flow(rgb_data0, rgb_data2, context, alpha);
+	save_img("data/1.jpg", rgb_data1, &context, 100); // 保存 rgb_data1 为 data/1.jpg
 
 	time_print_prog_end = clock();
 	LOG("time = %.2f s.", ((float)time_print_prog_end - time_print_prog_start) / 1000);
 
+	safe_free(rgb_data0);
+	safe_free(rgb_data2);
+	safe_free(rgb_data1);
 
     return 0;
 }
+
 
 U32 calc_inter(U32 x0, U32* x, U32* y, U32 len)
 {
