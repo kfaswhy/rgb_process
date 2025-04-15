@@ -28,22 +28,21 @@ void load_cfg()
 {
 
 	cfg.isp_gain_on = 0;
-	cfg.degamma_on = 0;
-	cfg.awb_on = 1;
-	cfg.ccm_on = 1;
-	cfg.rgbgamma_on = 1;
+	cfg.degamma_on = 1;
+	cfg.awb_on = 0;
+	cfg.ccm_on = 0;
+	cfg.rgbgamma_on = 0;
 	cfg.sharp_on = 0;
 
-	cfg.r_gain = 1.162 * 1024;
-	cfg.b_gain = 0.978 * 1024;
+	cfg.isp_gain = 1024 * 1.35;
+
+	cfg.r_gain = 1024 * 1.09;
+	cfg.b_gain = 1024 * 1.64;
 
 	float ccm_tmp[9] = {
- 1.0054, - 0.0258,   0.0686,
-- 0.0815,   1.0721,   0.0170,
- 0.0761, - 0.0463,   0.9144
-
-
-
+ 1.1978,   0.1001, - 0.3555,
+- 0.2817,   1.6173, - 0.5560,
+ 0.0839, - 0.7173,   1.9115
 	};
 
 	U32 gamma_xtmp[49] =
@@ -79,7 +78,7 @@ void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg)
 {
 	YUV* yuv_data = NULL;
 	//进入RGB域
-
+	isp_gain_process(rgb_data, context, cfg);
 	awb_process(rgb_data, context, cfg);
 	ccm_process(rgb_data, context, cfg);
 	rgbgamma_process(rgb_data, context, cfg);
