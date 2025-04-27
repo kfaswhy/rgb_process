@@ -54,6 +54,9 @@
     <ClCompile Include="degamma.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="txi.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ob.h">
@@ -93,6 +96,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="degamma.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="txi.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

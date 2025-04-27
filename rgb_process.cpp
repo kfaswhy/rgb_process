@@ -12,6 +12,7 @@
 #include "ygamma.h"
 #include "sharp.h"
 #include "y2r.h"
+#include "txi.h"
 
 using namespace std;
 using namespace cv;
@@ -94,19 +95,93 @@ void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg)
 	safe_free(yuv_data);
 }
 
+
+// 原始的增强函数，调用 screenshot_enhance_process 函数
+void screenshot_enhance(RGB* rgb_data, IMG_CONTEXT context) {
+	// 将 RGB 数据转换为 OpenCV 的 Mat 对象
+	cv::Mat image(context.height, context.width, CV_8UC3);
+	for (int y = 0; y < context.height; ++y) {
+		for (int x = 0; x < context.width; ++x) {
+			int index = y * context.width + x;
+			image.at<cv::Vec3b>(y, x)[0] = rgb_data[index].b;
+			image.at<cv::Vec3b>(y, x)[1] = rgb_data[index].g;
+			image.at<cv::Vec3b>(y, x)[2] = rgb_data[index].r;
+		}
+	}
+
+	// 中值滤波
+	cv::Mat median_filtered;
+	cv::medianBlur(image, median_filtered, 5);
+
+	float sharpen_strength = 1;
+	// 锐化操作，根据 sharpen_strength 调整锐化核
+	cv::Mat kernel = (cv::Mat_<float>(3, 3) << 0, -sharpen_strength, 0, -sharpen_strength, 1 + 4 * sharpen_strength, -sharpen_strength, 0, -sharpen_strength, 0);
+	cv::Mat sharpened;
+	cv::filter2D(median_filtered, sharpened, -1, kernel);
+
+	cv::Mat blended;
+	float blend_ratio = 0.6;
+	cv::addWeighted(image, 1 - blend_ratio, sharpened, blend_ratio, 0, blended);
+
+	// 局部对比度提升：自适应直方图均衡化
+	cv::Mat lab_image;
+	cv::cvtColor(blended, lab_image, cv::COLOR_BGR2Lab);
+	std::vector<cv::Mat> lab_planes(3);
+	cv::split(lab_image, lab_planes);
+
+	float clahe_strength = 0.3;
+
+	cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
+	clahe->setClipLimit(clahe_strength);
+	clahe->apply(lab_planes[0], lab_planes[0]);
+
+	cv::merge(lab_planes, lab_image);
+	cv::cvtColor(lab_image, blended, cv::COLOR_Lab2BGR);
+
+	// 将最终处理后的图像数据复制回输入的 Mat 对象
+	blended.copyTo(image);
+
+	// 将处理后的图像数据复制回 rgb_data
+	for (int y = 0; y < context.height; ++y) {
+		for (int x = 0; x < context.width; ++x) {
+			int index = y * context.width + x;
+			rgb_data[index].b = image.at<cv::Vec3b>(y, x)[0];
+			rgb_data[index].g = image.at<cv::Vec3b>(y, x)[1];
+			rgb_data[index].r = image.at<cv::Vec3b>(y, x)[2];
+		}
+	}
+}
+
+void screenshot_txi(RGB* rgb_data, IMG_CONTEXT context)
+{
+	YUV* yuv_data = NULL;
+
+	//RGB域TXI
+	txi_process(rgb_data, context, cfg);
+
+	yuv_data = r2y_process(rgb_data, context, cfg);
+
+	rgb_data = y2r_process(yuv_data, context, cfg);
+
+	safe_free(yuv_data);
+
+}
+
 int main() 
 {
 	load_cfg();
 	IMG_CONTEXT context = { 0 };
-	const char* filename = "data/0.jpg";
-	RGB* rgb_data = load_img(filename, &context);
+	RGB* rgb_data = load_img("data/0.jpg", &context);
+
 	clear_tmp();
 
 	save_img_with_timestamp(rgb_data, &context, "_original");
 	
-	degamma_process(rgb_data, context, cfg);
+	//degamma_process(rgb_data, context, cfg);
 
-	rk3588_isp(rgb_data, context, cfg);
+	//rk3588_isp(rgb_data, context, cfg);
+	//screenshot_enhance(rgb_data, context);
+	screenshot_txi(rgb_data, context);
 
 
 	save_img_with_timestamp(rgb_data, &context, "_final");

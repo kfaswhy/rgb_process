@@ -122,6 +122,8 @@ void load_cfg();
 
 void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg);
 
+void screenshot_enhance(RGB* rgb_data, IMG_CONTEXT context);
+
 
 int main();
 

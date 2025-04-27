@@ -155,6 +155,7 @@
     <ClCompile Include="rgbgamma.cpp" />
     <ClCompile Include="rgb_process.cpp" />
     <ClCompile Include="sharp.cpp" />
+    <ClCompile Include="txi.cpp" />
     <ClCompile Include="y2r.cpp" />
     <ClCompile Include="ygamma.cpp" />
   </ItemGroup>
@@ -170,6 +171,7 @@
     <ClInclude Include="rgbgamma.h" />
     <ClInclude Include="rgb_process.h" />
     <ClInclude Include="sharp.h" />
+    <ClInclude Include="txi.h" />
     <ClInclude Include="y2r.h" />
     <ClInclude Include="ygamma.h" />
   </ItemGroup>
