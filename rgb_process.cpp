@@ -13,6 +13,7 @@
 #include "sharp.h"
 #include "y2r.h"
 #include "txi.h"
+#include "ytxi.h"
 
 using namespace std;
 using namespace cv;
@@ -89,8 +90,8 @@ void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg)
 
 	sharp_process(yuv_data, context, cfg);
 
-	rgb_data = y2r_process(yuv_data, context, cfg);
-
+	RGB* rgb_tmp = y2r_process(yuv_data, context, cfg);
+	memcpy(rgb_data, rgb_tmp, context.full_size * sizeof(RGB));
 	
 	safe_free(yuv_data);
 }
@@ -154,17 +155,51 @@ void screenshot_enhance(RGB* rgb_data, IMG_CONTEXT context) {
 
 void screenshot_txi(RGB* rgb_data, IMG_CONTEXT context)
 {
-	YUV* yuv_data = NULL;
 
 	//RGB域TXI
-	txi_process(rgb_data, context, cfg);
+	//txi_process(rgb_data, context, cfg);
 
-	yuv_data = r2y_process(rgb_data, context, cfg);
+	YUV* yuv_data = r2y_process(rgb_data, context, cfg);
 
-	rgb_data = y2r_process(yuv_data, context, cfg);
+	txi_nv12_process(yuv_data, context, cfg);
+	//ytxi_process(yuv_data, context, cfg);
 
+	RGB* rgb_tmp = y2r_process(yuv_data, context, cfg);
+	memcpy(rgb_data, rgb_tmp, context.full_size * sizeof(RGB));
+
+	//save_img_with_timestamp(rgb_data, &context, "_ytxi");
 	safe_free(yuv_data);
 
+}
+
+
+void calc_shading(RGB* rgb_data, IMG_CONTEXT context) {
+	if (rgb_data == NULL) {
+		printf("rgb_data is NULL\n");
+		return;
+	}
+
+	int row = context.height / 2;
+	FILE* fp = fopen("middle_line_rgb_y.csv", "w");
+	if (!fp) {
+		printf("Failed to open output file\n");
+		return;
+	}
+
+	fprintf(fp, "R,G,B,Y\n");
+
+	for (int col = 0; col < context.width; ++col) {
+		int index = row * context.width + col;
+		RGB pixel = rgb_data[index];
+
+		// BT.601 standard Y = 0.299 * R + 0.587 * G + 0.114 * B
+		U8 y = (U8)(0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b);
+
+		fprintf(fp, "%d,%d,%d,%d\n", pixel.r, pixel.g, pixel.b, y);
+	}
+
+	fclose(fp);
+	printf("CSV saved: middle_line_rgb_y.csv\n");
 }
 
 int main() 
@@ -181,8 +216,8 @@ int main()
 
 	//rk3588_isp(rgb_data, context, cfg);
 	//screenshot_enhance(rgb_data, context);
-	screenshot_txi(rgb_data, context);
-
+	//screenshot_txi(rgb_data, context);
+	calc_shading(rgb_data,context);
 
 	save_img_with_timestamp(rgb_data, &context, "_final");
     // 释放内存

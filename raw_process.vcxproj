@@ -158,6 +158,7 @@
     <ClCompile Include="txi.cpp" />
     <ClCompile Include="y2r.cpp" />
     <ClCompile Include="ygamma.cpp" />
+    <ClCompile Include="ytxi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="awb.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="txi.h" />
     <ClInclude Include="y2r.h" />
     <ClInclude Include="ygamma.h" />
+    <ClInclude Include="ytxi.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

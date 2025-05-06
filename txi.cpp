@@ -45,7 +45,7 @@ U8 txi_process(RGB* rgb, IMG_CONTEXT context, G_CONFIG cfg)
 	return OK;
 }
 
-void save_mat(const cv::Mat& img, const std::string& filename)
+void save_mat2(const cv::Mat& img, const std::string& filename)
 {
 #if DEBUG_MODE
 	cv::Mat normalized_img;
@@ -120,12 +120,12 @@ void printMatInfo(const cv::Mat& mat) {
 
 void TXI(cv::Mat src, cv::Mat dst, int rows, int cols, int size, float en, int filtertype, int filtersize)
 {
-	save_mat(src, "0_src.jpg");
+	//save_mat(src, "0_src.jpg");
 	cv::Mat src_f(rows, cols, CV_32FC3);
 	
 	
 	src.convertTo(src_f, CV_32FC3, 1.0 / 255.0);
-	save_mat(src_f, "0_src_f.jpg");
+	//save_mat(src_f, "0_src_f.jpg");
 	
     
 	cv::Mat srcB(rows, cols, CV_32FC3);
@@ -135,7 +135,7 @@ void TXI(cv::Mat src, cv::Mat dst, int rows, int cols, int size, float en, int f
 	boxFilter(src_f, srcB, -1, cv::Size(2 * size + 1, 2 * size + 1));
 
 
-	save_mat(srcB, "1_bg.jpg");
+	//save_mat(srcB, "1_bg.jpg");
 	cv::Mat log_src(rows, cols, CV_32FC3);
 	cv::Mat log_srcB(rows, cols, CV_32FC3);
 	cv::Mat log_srcD(rows, cols, CV_32FC3);
@@ -144,13 +144,13 @@ void TXI(cv::Mat src, cv::Mat dst, int rows, int cols, int size, float en, int f
 	log(srcB, log_srcB);
 	log_srcD = log_src - log_srcB;
 	exp(log_srcD, srcD);
-	save_mat(srcD, "2_detail.jpg");
+	//save_mat(srcD, "2_detail.jpg");
 
 
 	//细节增强
 	cv::Mat srcD_en(rows, cols, CV_32FC3);
 	pow(srcD, en, srcD_en);
-	save_mat(srcD_en, "3_enhance.jpg");
+	//save_mat(srcD_en, "3_enhance.jpg");
 
 	//降噪
 	cv::Mat srcD_deno(rows, cols, CV_32FC3);
@@ -163,7 +163,7 @@ void TXI(cv::Mat src, cv::Mat dst, int rows, int cols, int size, float en, int f
 		GaussianBlur(srcD_en, srcD_deno, cv::Size(filtersize, filtersize), 0);
 	}
 
-	save_mat(srcD_deno, "4_deno.jpg");
+	//save_mat(srcD_deno, "4_deno.jpg");
 
 	//合并
 	cv::Mat log_srcD_en(rows, cols, CV_32FC3);
@@ -177,7 +177,7 @@ void TXI(cv::Mat src, cv::Mat dst, int rows, int cols, int size, float en, int f
 	exp(log_dst, dst_f);
 
 	dst_f.convertTo(dst, CV_8UC3, 255);
-	save_mat(dst, "5_dst.jpg");
+	//save_mat(dst, "5_dst.jpg");
 }
 
 
