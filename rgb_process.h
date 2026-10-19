@@ -17,7 +17,6 @@
 #include <vector>
 #include <string>
 #include <filesystem>
-#include <experimental/filesystem>
 
 #include <time.h>
 
@@ -124,6 +123,10 @@ void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg);
 
 void screenshot_enhance(RGB* rgb_data, IMG_CONTEXT context);
 
+void screenshot_txi(RGB* rgb_data, IMG_CONTEXT context);
+
+
+void calc_shading(RGB* rgb_data, IMG_CONTEXT context);
 
 int main();
 

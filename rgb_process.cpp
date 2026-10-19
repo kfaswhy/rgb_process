@@ -17,7 +17,7 @@
 
 using namespace std;
 using namespace cv;
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 U32 time_print_prog_start = clock();
 U32 time_print_prog_end;
@@ -32,19 +32,23 @@ void load_cfg()
 	cfg.isp_gain_on = 0;
 	cfg.degamma_on = 1;
 	cfg.awb_on = 0;
-	cfg.ccm_on = 0;
-	cfg.rgbgamma_on = 0;
+	cfg.ccm_on = 1;
+	cfg.rgbgamma_on = 1;
 	cfg.sharp_on = 0;
 
-	cfg.isp_gain = 1024 * 1.35;
+	cfg.isp_gain = 1024 * 1.8;
 
-	cfg.r_gain = 1024 * 1.09;
-	cfg.b_gain = 1024 * 1.64;
+	cfg.r_gain = 1024 * 1.28;
+	cfg.b_gain = 1024 * 2.84;
 
 	float ccm_tmp[9] = {
- 1.1978,   0.1001, - 0.3555,
-- 0.2817,   1.6173, - 0.5560,
- 0.0839, - 0.7173,   1.9115
+0.00, 	0.98 ,	0.16,
+0.00 ,- 0.01 ,	0.77,
+0.00 ,- 0.03, 	0.36
+
+
+
+
 	};
 
 	U32 gamma_xtmp[49] =
@@ -54,15 +58,21 @@ void load_cfg()
 
 	U32 gamma_ytmp[49] =
 	{
-		0,6,11,17,22,28,33,39,44,55,66,77,88,109,130,150,170,210,248,286,323,393,460,525,586,702,809,909,1002,1172,1323,1461,1587,1810,2003,2173,2325,2589,2812,3010,3191,3355,3499,3624,3736,3836,3927,4012,4095
+0, 6, 11, 17, 22, 28, 33, 39, 44, 55, 66, 77, 88, 109, 130, 150, 170,
+210, 248, 286, 323, 393, 460, 525, 586, 702, 809, 909, 1002, 1172, 1323,
+1461, 1587, 1810, 2003, 2173, 2325, 2589, 2812, 3010, 3191, 3355, 3499,
+3624, 3736, 3836, 3927, 4012, 4095
 	};
 
 	U32 degamma_xtmp[49] =
 	{
-		0, 6, 11, 17, 22, 28, 33, 39, 44, 55, 66, 77, 88, 109, 130, 150, 170, 210, 248, 286, 323, 393, 460, 525, 586, 702, 809, 909, 1002, 1172, 1323, 1461, 1587, 1810, 2003, 2173, 2325, 2589, 2812, 3010, 3191, 3355, 3499, 3624, 3736, 3836, 3927, 4012, 4095
-	};
+		//0, 63, 90, 110, 127, 143, 156, 169, 180, 202, 221, 239, 255, 286, 313, 338, 361, 404, 443, 478, 511, 572, 626, 677, 723, 809, 886, 957, 1023, 1144, 1253, 1354, 1447, 1618, 1773, 1915, 2047, 2289, 2507, 2708, 2895, 3071, 3237, 3395, 3546, 3691, 3830, 3964, 4095
+		0, 6, 11, 17, 22, 28, 33, 39, 44, 55, 66, 77, 88, 109, 130, 150, 170, 210, 248, 286,		323, 393, 460, 525, 586, 702, 809, 909, 1002, 1172, 1323, 1461, 1587, 1810, 2003, 2173,		2325, 2589, 2812, 3010, 3191, 3355, 3499, 3624, 3736, 3836, 3927, 4012, 4095
 
-	U32 degamma_ytmp[49] =
+		//0, 15, 25, 33, 40, 46, 52, 58, 63, 74, 83, 92, 101, 117, 133, 147, 161, 187, 211, 234, 255, 296, 335, 371, 406, 471, 532, 589, 644, 748, 845, 936, 1023, 1187, 1341, 1486, 1625, 1885, 2129, 2359, 2579, 2790, 2993, 3189, 3380, 3565, 3746, 3922, 4095
+
+	};
+U32 degamma_ytmp[49] =
 	{ 
 		0,1,2,3,4,5,6,7,8,10,12,14,16,20,24,28,32,40,48,56,64,80,96,112,128,160,192,224,256,320,384,448,512,640,768,896,1024,1280,1536,1792,2048,2304,2560,2816,3072,3328,3584,3840,4095
 	};
@@ -80,10 +90,12 @@ void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg)
 {
 	YUV* yuv_data = NULL;
 	//进入RGB域
+
 	isp_gain_process(rgb_data, context, cfg);
 	awb_process(rgb_data, context, cfg);
 	ccm_process(rgb_data, context, cfg);
 	rgbgamma_process(rgb_data, context, cfg);
+
 
 	yuv_data = r2y_process(rgb_data, context, cfg);
 	//进入YUV域
@@ -95,7 +107,6 @@ void rk3588_isp(RGB* rgb_data, IMG_CONTEXT context, G_CONFIG cfg)
 	
 	safe_free(yuv_data);
 }
-
 
 // 原始的增强函数，调用 screenshot_enhance_process 函数
 void screenshot_enhance(RGB* rgb_data, IMG_CONTEXT context) {
@@ -151,6 +162,7 @@ void screenshot_enhance(RGB* rgb_data, IMG_CONTEXT context) {
 			rgb_data[index].r = image.at<cv::Vec3b>(y, x)[2];
 		}
 	}
+	save_img_with_timestamp(rgb_data, &context, "_enhance");
 }
 
 void screenshot_txi(RGB* rgb_data, IMG_CONTEXT context)
@@ -171,7 +183,6 @@ void screenshot_txi(RGB* rgb_data, IMG_CONTEXT context)
 	safe_free(yuv_data);
 
 }
-
 
 void calc_shading(RGB* rgb_data, IMG_CONTEXT context) {
 	if (rgb_data == NULL) {
@@ -206,18 +217,22 @@ int main()
 {
 	load_cfg();
 	IMG_CONTEXT context = { 0 };
-	RGB* rgb_data = load_img("data/0.jpg", &context);
+	RGB* rgb_data = load_img("data/0.bmp", &context);
 
 	clear_tmp();
 
 	save_img_with_timestamp(rgb_data, &context, "_original");
 	
-	//degamma_process(rgb_data, context, cfg);
-
+	
+	degamma_process(rgb_data, context, cfg);
 	//rk3588_isp(rgb_data, context, cfg);
 	//screenshot_enhance(rgb_data, context);
 	//screenshot_txi(rgb_data, context);
-	calc_shading(rgb_data,context);
+	//calc_shading(rgb_data,context);
+
+	ccm_process(rgb_data, context, cfg);
+	rgbgamma_process(rgb_data, context, cfg);
+
 
 	save_img_with_timestamp(rgb_data, &context, "_final");
     // 释放内存
@@ -321,7 +336,6 @@ RGB* load_img(const char* filename, IMG_CONTEXT* context)
 
 	return rgb_data;
 }
-
 
 void clear_tmp() {
 	std::string extensions[] = { ".jpg", ".png", ".bmp" };

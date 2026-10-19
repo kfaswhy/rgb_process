@@ -241,13 +241,13 @@ U8 txi_nv12_process(YUV* yuv, IMG_CONTEXT context, G_CONFIG cfg)
 
     
     //细节层半径
-    int size = 4;
+    int size = 5;
     //细节增强强度>1
-    float str = 2;
+    float str = 5;
     //滤波方式：1=中值滤波，2=高斯滤波
     int filtertype = 1;
     //滤波器大小
-    int filtersize = 3;
+    int filtersize = 5;
 
     int t0 = clock();
 
